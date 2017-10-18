@@ -52,6 +52,8 @@ from rl.random import OrnsteinUhlenbeckProcess
 from rl.core import Processor
 from rl.keras_future import concatenate, Model
 
+from rl.callbacks import Visualizer
+
 class PendulumProcessor(Processor):
     def process_reward(self, reward):
         # The magnitude of the reward can be important. Since each step yields a relatively
@@ -192,10 +194,38 @@ to successfully train bipedal, about 4000 episode is needed. that's about 4,000,
 during the entire duration of fit(), the noise amplitude will gradually decrease from 1x to 0x. this is desired behavior. you will see code doing that within keras-rl.
 
 '''
-agent.fit(env, nb_steps=1e6, visualize=False, verbose=1, nb_max_episode_steps=1600)
+
+'''
+now let's talk about visualization. by default, if you choose visualize=True, keras-rl will add the following callback, to visualize after every step:
+
+class Visualizer(Callback):
+    def on_action_end(self, action, logs):
+        self.env.render(mode='human')
+
+as per https://github.com/matthiasplappert/keras-rl/blob/master/rl/callbacks.py#L326-L328
+
+but really, you want controllable visualization rates, at least for bipedal. you can make a similar callback yourself:
+'''
+
+class SkippyVisualizer(Visualizer):
+    def on_action_end(self, action, logs):
+        if not hasattr(self,'counter'):
+            self.counter = 0
+
+        self.counter+=1
+
+        if self.counter%20==0: # render() every 20 steps. pretty enough for visualization.
+            self.env.render(mode='human')
+sv = SkippyVisualizer()
+
+agent.fit(env, nb_steps=1e6, callbacks=[sv], visualize=False, verbose=1, nb_max_episode_steps=1600)
 
 # After training is done, we save the final weights.
 # agent.save_weights('cdqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
 agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1600)
+
+'''
+think again: is bipedal really 30-fps environment? if not then what fps is it?
+'''
