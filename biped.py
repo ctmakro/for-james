@@ -52,7 +52,7 @@ from rl.random import OrnsteinUhlenbeckProcess
 from rl.core import Processor
 from rl.keras_future import concatenate, Model
 
-from rl.callbacks import Visualizer
+from rl.callbacks import Visualizer, Callback
 
 class PendulumProcessor(Processor):
     def process_reward(self, reward):
@@ -218,7 +218,30 @@ class SkippyVisualizer(Visualizer):
             self.env.render(mode='human')
 sv = SkippyVisualizer()
 
-agent.fit(env, nb_steps=1e6, callbacks=[sv], visualize=False, verbose=1, nb_max_episode_steps=1600)
+'''
+you want metrics. you want all the metrics.
+
+'''
+
+class LogEmAll(Callback):
+    def on_step_end(self, step, logs):
+        metrics = logs['metrics'] # the numbers are output of the algorithm.
+        names = self.model.metrics_names # name of metrics are specified within the algorithm(model). some metrics (like Q-value) exists only on some algorithms.
+
+        if np.isnan(metrics[0]): #if one of the entry is not a number
+            return # dont print or plot
+
+        print(step)
+
+        # print metric along with their names.
+        for name,number in zip(names,metrics): # zip means to loop the two together.
+            print(name,':',number) # crowded.
+
+        print('-'*30)
+
+lea = LogEmAll()
+
+agent.fit(env, nb_steps=1e6, callbacks=[sv,lea], visualize=False, verbose=0, nb_max_episode_steps=1600)
 
 # After training is done, we save the final weights.
 # agent.save_weights('cdqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
