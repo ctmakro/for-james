@@ -170,20 +170,32 @@ the actual tedious computation of V, A, L, Q, from replay memory(experience), an
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
 processor = PendulumProcessor()
-memory = SequentialMemory(limit=100000, window_length=1)
+memory = SequentialMemory(limit=200000, window_length=1)
 random_process = OrnsteinUhlenbeckProcess(theta=.15, mu=0., sigma=.3, size=nb_actions)
 agent = NAFAgent(nb_actions=nb_actions, V_model=V_model, L_model=L_model, mu_model=mu_model,
                  memory=memory, nb_steps_warmup=100, random_process=random_process,
                  gamma=.99, target_model_update=1e-3, processor=processor)
-agent.compile(Adam(lr=.001, clipnorm=1.), metrics=['mae'])
+agent.compile(Adam(lr=.001, clipnorm=1.), metrics=['mse'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.
-agent.fit(env, nb_steps=50000, visualize=True, verbose=1, nb_max_episode_steps=200)
+
+'''
+
+bipedal walker env, when submitting to gym network, uses an episodic length of 1600 steps.
+
+disable visualization to accelerate.
+
+to successfully train bipedal, about 4000 episode is needed. that's about 4,000,000 steps. let's use 1M as a starting point!
+
+during the entire duration of fit(), the noise amplitude will gradually decrease from 1x to 0x. this is desired behavior. you will see code doing that within keras-rl.
+
+'''
+agent.fit(env, nb_steps=1e6, visualize=False, verbose=1, nb_max_episode_steps=1600)
 
 # After training is done, we save the final weights.
 # agent.save_weights('cdqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
-agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=200)
+agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1600)
